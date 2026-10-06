@@ -135,13 +135,15 @@ final class AudioCaptureManager: NSObject, ObservableObject, SCStreamDelegate, S
             mid: mid,
             treble: treble,
             pitch: frame.pitch,
-            spike: frame.spike
+            spike: frame.spike,
+            bassTransient: frame.bassTransient
         )
         
         framesSent += 1
         if framesSent % 100 == 1 {
-            print(String(format: "[Mac] frame #%d b=%.2f m=%.2f t=%.2f p=%.2f spike=%@",
-                         framesSent, bass, mid, treble, frame.pitch, frame.spike ? "true" : "false"))
+            print(String(format: "[Mac] frame #%d b=%.2f m=%.2f t=%.2f p=%.2f spike=%@ bassT=%@",
+                         framesSent, bass, mid, treble, frame.pitch, 
+                         frame.spike ? "T" : "F", frame.bassTransient ? "T" : "F"))
         }
         
         MacNetworkManager.shared.send(payload: payload)

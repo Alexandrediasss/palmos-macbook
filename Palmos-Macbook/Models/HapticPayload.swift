@@ -19,6 +19,8 @@ struct HapticPayload: Codable {
     let pitch: Float?
     /// true no instante de um ataque súbito nos agudos
     let spike: Bool?
+    /// true se o grave atual for um impacto (transient) em vez de contínuo
+    let bassTransient: Bool?
 
     init(type: String,
          intensity: Float,
@@ -27,7 +29,8 @@ struct HapticPayload: Codable {
          mid: Float? = nil,
          treble: Float? = nil,
          pitch: Float? = nil,
-         spike: Bool? = nil) {
+         spike: Bool? = nil,
+         bassTransient: Bool? = nil) {
         self.type = type
         self.intensity = intensity
         self.sharpness = sharpness
@@ -36,5 +39,6 @@ struct HapticPayload: Codable {
         self.treble = treble
         self.pitch = pitch
         self.spike = spike
+        self.bassTransient = bassTransient
     }
 }
