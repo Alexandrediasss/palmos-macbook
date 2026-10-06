@@ -127,7 +127,12 @@ final class AudioCaptureManager: NSObject, ObservableObject, SCStreamDelegate, S
         
         // Filtro de IA: reduz drasticamente a intensidade (para 15%) se for detectado Speech (voz)
         let isSpeech = semanticAnalyzer.currentClass == "Speech"
-        let g = currentIntensity * (isSpeech ? 0.15 : 1.0)
+        
+        // Haptic Ducking: Se for som contínuo (sem impacto), abafa para criar contraste. Se for impacto, libera 100%.
+        let isImpact = frame.spike || frame.bassTransient
+        let duckingFactor: Float = isImpact ? 1.0 : 0.4
+        
+        let g = currentIntensity * duckingFactor * (isSpeech ? 0.15 : 1.0)
         
         let bass = min(frame.bass * g, 1)
         let mid = min(frame.mid * g, 1)
