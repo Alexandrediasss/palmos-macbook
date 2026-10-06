@@ -13,8 +13,9 @@ A interface deve parecer uma extensão nativa do próprio macOS, utilizando os m
   - `waveform` (com AccentColor): Conectado e capturando áudio ativamente.
 - **O Menu Suspenso:**
   - **Header:** Status da conexão em destaque (ex: "Palmos: Conectado a iPhone de Carlos") e botão circular para Desconectar.
-  - **Calibração Visual:** Sliders nativos (`Slider` do SwiftUI) para ajustar o "Filtro de Ruído/Graves" e a "Intensidade Global".
-  - **Mini-Espectrômetro (Opcional):** Um pequeno medidor de volume visual (VU meter) embutido no menu apenas para confirmar que o Mac está, de fato, "ouvindo" o sistema.
+  - **Medidores de depuração (v2):** 3 barras (Graves/ritmo, Médios/melodia, Agudos/textura) com a leitura 0–100% enviada ao iPhone, a **nota atual** (ex.: `A4 · 440 Hz`) e um indicador que pisca a cada `spike`.
+  - **Calibração:** Slider de "Intensidade Global" (multiplica com o slider do iPhone). O antigo "Filtro de Graves" foi removido (substituído por AGC).
+  - **Testes:** "Testar Vibração" (`transient`) e "Frame de teste" (≈1 s de frames fixos a 30 Hz: b=0.8 m=0.5 t=0.3 p=0.55, spike a cada 8 frames).
 
 ## 3. Onboarding e Fluxo de Permissões Críticas
 O maior obstáculo de UX no macOS é a segurança. O `ScreenCaptureKit` exige a permissão de "Gravação de Tela e Áudio do Sistema" (Screen Recording).

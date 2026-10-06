@@ -12,9 +12,41 @@ struct MenuRootView: View {
     @StateObject private var networkManager = MacNetworkManager.shared
     @StateObject private var audioManager = AudioCaptureManager.shared
 
-    // Locais por enquanto; serão migrados para @AppStorage (bassThreshold / globalIntensity).
-    @State private var bassFilter: Double = 0.3
+    // Local por enquanto; será migrado para @AppStorage (globalIntensity).
+    // Atenção: multiplica com o slider de intensidade do iPhone (50% × 50% = 25%).
     @State private var globalIntensity: Double = 1.0
+    @State private var isSendingTestFrames = false
+
+    /// Nome da nota (ex.: "A4") a partir da frequência dominante dos médios.
+    private var noteText: String {
+        let f = audioManager.pitchFrequency
+        guard f > 0 else { return "—" }
+        let names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+        let midi = Int((69 + 12 * log2(Double(f) / 440)).rounded())
+        let octave = midi / 12 - 1
+        return "\(names[((midi % 12) + 12) % 12])\(octave) · \(Int(f)) Hz"
+    }
+
+    /// Envia ~1 s de frames fixos a 30 Hz (um frame sozinho dura só 200 ms no iPhone).
+    private func sendTestFrames() {
+        guard !isSendingTestFrames else { return }
+        isSendingTestFrames = true
+        Task {
+            for i in 0..<30 {
+                let payload = HapticPayload(type: "frame",
+                                            intensity: 0.8,
+                                            sharpness: 0.3,
+                                            bass: 0.8,
+                                            mid: 0.5,
+                                            treble: 0.3,
+                                            pitch: 0.55,
+                                            spike: i % 8 == 0)
+                networkManager.send(payload: payload)
+                try? await Task.sleep(nanoseconds: 33_000_000)
+            }
+            isSendingTestFrames = false
+        }
+    }
 
     private var statusText: String {
         switch networkManager.connectionState {
@@ -64,17 +96,42 @@ struct MenuRootView: View {
 
             Divider()
 
+            VStack(alignment: .leading, spacing: 8) {
+                BandMeter(title: "Graves (ritmo)", value: audioManager.bassLevel, tint: .orange)
+                BandMeter(title: "Médios (melodia)", value: audioManager.midLevel, tint: .green)
+                BandMeter(title: "Agudos (textura)", value: audioManager.trebleLevel, tint: .cyan)
+
+                HStack {
+                    Text("Nota")
+                        .font(.subheadline)
+                    Spacer()
+                    Text(noteText)
+                        .font(.subheadline)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                    Circle()
+                        .fill(audioManager.spikeActive ? Color.yellow : Color.gray.opacity(0.3))
+                        .frame(width: 10, height: 10)
+                        .accessibilityLabel("Ataque nos agudos")
+                }
+            }
+
+            Divider()
+
             VStack(alignment: .leading, spacing: 14) {
-                SliderRow(title: "Filtro de Graves",
-                          accessibilityHint: "Ajustar sensibilidade de graves",
-                          value: $bassFilter)
                 SliderRow(title: "Intensidade Global",
                           accessibilityHint: "Ajustar intensidade global da vibração",
                           value: $globalIntensity)
                           
-                Button("Testar Vibração") {
-                    let payload = HapticPayload(type: "transient", intensity: Float(globalIntensity), sharpness: 0.8)
-                    networkManager.send(payload: payload)
+                HStack {
+                    Button("Testar Vibração") {
+                        let payload = HapticPayload(type: "transient", intensity: Float(globalIntensity), sharpness: 0.8)
+                        networkManager.send(payload: payload)
+                    }
+                    Button("Frame de teste") {
+                        sendTestFrames()
+                    }
+                    .disabled(isSendingTestFrames)
                 }
                 .disabled(!isConnected)
             }
@@ -93,9 +150,6 @@ struct MenuRootView: View {
         }
         .padding(14)
         .frame(width: 280)
-        .onChange(of: bassFilter) { newValue in
-            audioManager.currentBassThreshold = Float(newValue)
-        }
         .onChange(of: globalIntensity) { newValue in
             audioManager.currentIntensity = Float(newValue)
         }
@@ -105,6 +159,31 @@ struct MenuRootView: View {
                 audioManager.startCapture()
             }
         }
+    }
+}
+
+// MARK: - Barra de banda (depuração)
+
+private struct BandMeter: View {
+    let title: LocalizedStringKey
+    let value: Float
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(title)
+                    .font(.caption)
+                Spacer()
+                Text(Double(value), format: .percent.precision(.fractionLength(0)))
+                    .font(.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+            ProgressView(value: Double(min(max(value, 0), 1)))
+                .tint(tint)
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
