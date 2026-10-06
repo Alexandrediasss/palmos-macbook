@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_palmos-haptic._tcp</string>
+		<string>_palmos-haptic._udp</string>
+	</array>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>O Palmos precisa gravar a tela para capturar o áudio do sistema (YouTube, jogos, etc.) e enviar as vibrações para o iPhone.</string>
+</dict>
+</plist>

@@ -6,27 +6,19 @@
 //
 
 import SwiftUI
-import SwiftData
 
 @main
 struct Palmos_MacbookApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    init() {
+        MacNetworkManager.shared.startBrowsing()
+    }
 
     var body: some Scene {
-        WindowGroup {
-            ContentView()
+        MenuBarExtra("Palmos", systemImage: "waveform.badge.magnifyingglass") {
+            MenuRootView()
         }
-        .modelContainer(sharedModelContainer)
+        // `.window` é necessário para hospedar controles como Slider no menu.
+        .menuBarExtraStyle(.window)
     }
 }
