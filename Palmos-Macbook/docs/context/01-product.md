@@ -16,8 +16,10 @@ O macOS é o único ambiente sem as restrições severas de "sandbox" do iOS, pe
 
 O fluxo de valor funciona assim:
 1. **Ouvir:** O Mac captura o áudio que está indo para os alto-falantes em tempo real.
-2. **Entender:** O Cérebro analisa as frequências sonoras (separando batidas graves de efeitos agudos).
-3. **Comandar:** O Mac traduz esses sons em intensidades e envia instruções via rede local, em milissegundos, ordenando o iPhone a vibrar em sincronia perfeita com a tela.
+2. **Entender:** O Cérebro separa o som em 3 camadas — **Ritmo** (graves), **Melodia** (médios + nota dominante) e **Textura** (agudos/ataques) — normalizando cada uma dinamicamente (músicas calmas também vibram).
+3. **Comandar:** O Mac envia *frames* a ~30 Hz pela rede local; o iPhone toca as 3 camadas simultaneamente na Taptic Engine.
+
+> **v2 — Tradução Sinestésica:** na v1 o iPhone era só um "subwoofer tátil". Na v2 transmitimos também emoção e textura. Limite físico honesto: a Taptic Engine não toca notas; a melodia é *sugerida* (a nota dominante vira *sharpness* no iPhone).
 
 ## 4. Público-Alvo e Casos de Uso
 - **Público Primário:** Pessoas surdas ou com deficiência auditiva (PCD) buscando autonomia e imersão no consumo de conteúdo digital.
