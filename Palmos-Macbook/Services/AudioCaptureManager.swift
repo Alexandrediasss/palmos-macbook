@@ -159,7 +159,7 @@ final class AudioCaptureManager: NSObject, ObservableObject, SCStreamDelegate, S
         if framesSent % 100 == 1 {
             let semLog = semanticAnalyzer.currentClass ?? "none"
             print(String(format: "[Mac] frame #%d b=%.2f m=%.2f t=%.2f p=%.2f spike=%@ bassT=%@ sem=%@",
-                         framesSent, bass, mid, treble, frame.pitch, 
+                         framesSent, frame.bass, frame.mid, frame.treble, frame.pitch, 
                          frame.spike ? "T" : "F", frame.bassTransient ? "T" : "F", semLog))
         }
         
