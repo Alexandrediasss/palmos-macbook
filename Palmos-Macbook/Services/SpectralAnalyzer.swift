@@ -34,9 +34,9 @@ nonisolated final class SpectralAnalyzer {
     static let hopSize = 1024
 
     /// Piso de ruído (RMS da banda, amplitude relativa ao fundo de escala): abaixo disso = silêncio.
-    static let noiseFloor: Float = 0.0005
-    /// Pico mínimo do AGC: impede que ruído quase inaudível seja "amplificado" até 1.0.
-    static let minPeak: Float = 0.004
+    static let noiseFloor: Float = 0.002
+    /// Pico mínimo do AGC: impede que ruído inaudível seja amplificado até 1.0 (Expansão).
+    static let minPeak: Float = 0.06
     /// Decaimento do pico por hop (~47 hops/s ⇒ constante de tempo ≈ 4 s).
     static let peakDecay: Float = 0.995
 
