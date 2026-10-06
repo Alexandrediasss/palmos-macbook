@@ -44,7 +44,8 @@ nonisolated final class SpectralAnalyzer {
     /// Abaixo deste valor normalizado de `mid`, a nota não é confiável ⇒ pitch = 0.5.
     static let pitchMidGate: Float = 0.03
 
-    static let spikeRatio: Float = 1.5
+    static let trebleSpikeRatio: Float = 1.5
+    static let bassSpikeRatio: Float = 1.15
     static let spikeRefractory: Double = 0.040
     static let fluxAverageSmoothing: Float = 0.1
 
@@ -231,7 +232,7 @@ nonisolated final class SpectralAnalyzer {
         
         var spike = false
         if rawTreble > Self.noiseFloor * 2,
-           flux > Self.spikeRatio * max(fluxAverage, 1e-5),
+           flux > Self.trebleSpikeRatio * max(fluxAverage, 1e-5),
            clock - lastSpikeTime >= Self.spikeRefractory {
             spike = true
             lastSpikeTime = clock
@@ -239,7 +240,7 @@ nonisolated final class SpectralAnalyzer {
         
         var bassSpike = false
         if rawBass > Self.noiseFloor * 2,
-           bassFlux > Self.spikeRatio * max(bassFluxAverage, 1e-5),
+           bassFlux > Self.bassSpikeRatio * max(bassFluxAverage, 1e-5),
            clock - lastBassSpikeTime >= Self.spikeRefractory {
             bassSpike = true
             lastBassSpikeTime = clock
