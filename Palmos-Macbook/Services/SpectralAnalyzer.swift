@@ -21,8 +21,9 @@ nonisolated struct AnalysisFrame {
     /// Frequência (Hz) da nota dominante dos médios; 0 quando não há nota.
     var frequency: Float = 0
     var spike: Bool = false
+    var bassTransient: Bool = false
 
-    var isSilent: Bool { bass == 0 && mid == 0 && treble == 0 && !spike }
+    var isSilent: Bool { bass == 0 && mid == 0 && treble == 0 && !spike && !bassTransient }
 }
 
 nonisolated final class SpectralAnalyzer {
@@ -33,9 +34,9 @@ nonisolated final class SpectralAnalyzer {
     static let hopSize = 1024
 
     /// Piso de ruído (RMS da banda, amplitude relativa ao fundo de escala): abaixo disso = silêncio.
-    static let noiseFloor: Float = 0.0005
-    /// Pico mínimo do AGC: impede que ruído quase inaudível seja "amplificado" até 1.0.
-    static let minPeak: Float = 0.004
+    static let noiseFloor: Float = 0.002
+    /// Pico mínimo do AGC: impede que ruído inaudível seja amplificado até 1.0 (Expansão).
+    static let minPeak: Float = 0.06
     /// Decaimento do pico por hop (~47 hops/s ⇒ constante de tempo ≈ 4 s).
     static let peakDecay: Float = 0.995
 
@@ -43,7 +44,8 @@ nonisolated final class SpectralAnalyzer {
     /// Abaixo deste valor normalizado de `mid`, a nota não é confiável ⇒ pitch = 0.5.
     static let pitchMidGate: Float = 0.03
 
-    static let spikeRatio: Float = 1.5
+    static let trebleSpikeRatio: Float = 1.5
+    static let bassSpikeRatio: Float = 1.15
     static let spikeRefractory: Double = 0.040
     static let fluxAverageSmoothing: Float = 0.1
 
@@ -61,6 +63,7 @@ nonisolated final class SpectralAnalyzer {
     private var imagOut: [Float]
     private var amp: [Float]            // amplitude por bin (n/2)
     private var prevTreble: [Float]     // amplitudes dos agudos no hop anterior
+    private var prevBass: [Float]       // amplitudes dos graves no hop anterior
 
     private var sampleRate: Double = 0
     private var bassRange = 1..<2
@@ -70,8 +73,10 @@ nonisolated final class SpectralAnalyzer {
     private var peaks: [Float] = [SpectralAnalyzer.minPeak, SpectralAnalyzer.minPeak, SpectralAnalyzer.minPeak]
     private var pitchSmoothed: Float = 0.5
     private var fluxAverage: Float = 0
+    private var bassFluxAverage: Float = 0
     private var clock: Double = 0       // relógio em segundos de áudio processado
     private var lastSpikeTime: Double = -1
+    private var lastBassSpikeTime: Double = -1
 
     private var acc = AnalysisFrame()
     private var accHops = 0
@@ -93,6 +98,7 @@ nonisolated final class SpectralAnalyzer {
         imagOut = [Float](repeating: 0, count: n)
         amp = [Float](repeating: 0, count: n / 2)
         prevTreble = [Float](repeating: 0, count: n / 2)
+        prevBass = [Float](repeating: 0, count: n / 2)
     }
 
     deinit {
@@ -106,9 +112,12 @@ nonisolated final class SpectralAnalyzer {
         peaks = [Self.minPeak, Self.minPeak, Self.minPeak]
         pitchSmoothed = 0.5
         fluxAverage = 0
+        bassFluxAverage = 0
         clock = 0
         lastSpikeTime = -1
+        lastBassSpikeTime = -1
         for i in prevTreble.indices { prevTreble[i] = 0 }
+        for i in prevBass.indices { prevBass[i] = 0 }
         acc = AnalysisFrame()
         accHops = 0
     }
@@ -139,6 +148,7 @@ nonisolated final class SpectralAnalyzer {
         acc.mid = 0
         acc.treble = 0
         acc.spike = false
+        acc.bassTransient = false
         accHops = 0
         return out
     }
@@ -203,22 +213,41 @@ nonisolated final class SpectralAnalyzer {
         }
         pitchSmoothed += Self.pitchSmoothing * (targetPitch - pitchSmoothed)
 
-        // 4) Spectral flux dos agudos → spike.
+        // 4) Spectral flux dos agudos e graves → spike / bassTransient.
         var flux: Float = 0
         for k in trebleRange {
             let d = amp[k] - prevTreble[k]
             if d > 0 { flux += d }
             prevTreble[k] = amp[k]
         }
+        
+        var bassFlux: Float = 0
+        for k in bassRange {
+            let d = amp[k] - prevBass[k]
+            if d > 0 { bassFlux += d }
+            prevBass[k] = amp[k]
+        }
+
         clock += Double(Self.hopSize) / sampleRate
+        
         var spike = false
         if rawTreble > Self.noiseFloor * 2,
-           flux > Self.spikeRatio * max(fluxAverage, 1e-5),
+           flux > Self.trebleSpikeRatio * max(fluxAverage, 1e-5),
            clock - lastSpikeTime >= Self.spikeRefractory {
             spike = true
             lastSpikeTime = clock
         }
+        
+        var bassSpike = false
+        if rawBass > Self.noiseFloor * 2,
+           bassFlux > Self.bassSpikeRatio * max(bassFluxAverage, 1e-5),
+           clock - lastBassSpikeTime >= Self.spikeRefractory {
+            bassSpike = true
+            lastBassSpikeTime = clock
+        }
+
         fluxAverage += Self.fluxAverageSmoothing * (flux - fluxAverage)
+        bassFluxAverage += Self.fluxAverageSmoothing * (bassFlux - bassFluxAverage)
 
         // Acumula até o próximo envio de rede.
         acc.bass = max(acc.bass, bass)
@@ -227,6 +256,7 @@ nonisolated final class SpectralAnalyzer {
         acc.pitch = pitchSmoothed
         acc.frequency = freq
         acc.spike = acc.spike || spike
+        acc.bassTransient = acc.bassTransient || bassSpike
         accHops += 1
     }
 

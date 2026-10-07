@@ -36,6 +36,9 @@ final class AudioCaptureManager: NSObject, ObservableObject, SCStreamDelegate, S
     
     // DSP (acessado somente na audioQueue)
     private let analyzer = SpectralAnalyzer()
+    
+    // IA Semântica
+    private let semanticAnalyzer = SemanticAnalyzer()
 
     func startCapture() {
         Task {
@@ -103,13 +106,31 @@ final class AudioCaptureManager: NSObject, ObservableObject, SCStreamDelegate, S
         // 1) Áudio → mono Float32 → FFT / bandas / pitch / spike (hop de 1024 samples)
         if let (mono, sampleRate) = extractMono(from: sampleBuffer) {
             analyzer.process(mono: mono, sampleRate: sampleRate)
+            semanticAnalyzer.process(mono: mono, sampleRate: sampleRate)
         }
         
         // 2) Throttle: 1 frame de rede por ~33 ms (acumulou o máximo das bandas no intervalo)
         let now = Date()
         guard now.timeIntervalSince(lastSendTime) >= sendInterval else { return }
-        guard let frame = analyzer.takeFrame() else { return }
+        guard var frame = analyzer.takeFrame() else { return }
         lastSendTime = now
+        
+        let isImpact = frame.spike || frame.bassTransient
+        let isSpeech = semanticAnalyzer.currentClass == "Speech"
+        let duckingFactor: Float = isImpact ? 1.0 : 0.4
+        let g = currentIntensity * duckingFactor * (isSpeech ? 0.15 : 1.0)
+        
+        // Expansão Exponencial (x^1.5): amassa os valores fracos e preserva os fortes
+        frame.bass = min(pow(frame.bass, 1.5) * g, 1)
+        frame.mid = min(pow(frame.mid, 1.5) * g, 1)
+        frame.treble = min(pow(frame.treble, 1.5) * g, 1)
+        
+        // Noise Gate Rigoroso: se a intensidade for ínfima (< 3%) e não for impacto, zera tudo.
+        if max(frame.bass, frame.mid, frame.treble) < 0.03 && !isImpact {
+            frame.bass = 0
+            frame.mid = 0
+            frame.treble = 0
+        }
         
         publishLevelsThrottled(frame)
         
@@ -121,27 +142,25 @@ final class AudioCaptureManager: NSObject, ObservableObject, SCStreamDelegate, S
             silentFrames = 0
         }
         
-        // Valores lineares 0...1 (SEM curva de compressão: o iPhone aplica x^0.7).
-        let g = currentIntensity
-        let bass = min(frame.bass * g, 1)
-        let mid = min(frame.mid * g, 1)
-        let treble = min(frame.treble * g, 1)
-        
         let payload = HapticPayload(
             type: "frame",
-            intensity: max(bass, mid, treble),
+            intensity: max(frame.bass, frame.mid, frame.treble),
             sharpness: 0.3,
-            bass: bass,
-            mid: mid,
-            treble: treble,
+            bass: frame.bass,
+            mid: frame.mid,
+            treble: frame.treble,
             pitch: frame.pitch,
-            spike: frame.spike
+            spike: frame.spike,
+            bassTransient: frame.bassTransient,
+            semanticClass: semanticAnalyzer.currentClass
         )
         
         framesSent += 1
         if framesSent % 100 == 1 {
-            print(String(format: "[Mac] frame #%d b=%.2f m=%.2f t=%.2f p=%.2f spike=%@",
-                         framesSent, bass, mid, treble, frame.pitch, frame.spike ? "true" : "false"))
+            let semLog = semanticAnalyzer.currentClass ?? "none"
+            print(String(format: "[Mac] frame #%d b=%.2f m=%.2f t=%.2f p=%.2f spike=%@ bassT=%@ sem=%@",
+                         framesSent, frame.bass, frame.mid, frame.treble, frame.pitch, 
+                         frame.spike ? "T" : "F", frame.bassTransient ? "T" : "F", semLog))
         }
         
         MacNetworkManager.shared.send(payload: payload)

@@ -16,16 +16,19 @@ O modelo de dados mais crítico do projeto não é salvo em disco, mas sim dispa
 
 ```swift
 struct HapticPayload: Codable {
-    let type: String       // "frame" (v2) | "transient" | "continuous" (v1 legado)
-    let intensity: Float   // 0...1; em frame = max(bass, mid, treble)
-    let sharpness: Float   // 0...1; em frame = 0.3 (ignorado pelo iPhone)
+    let type: String       // "frame" (v2/v3/v4) | "transient" | "continuous" (v1 legado)
+    let intensity: Float   // 0...1; em frame = max(bass, mid, treble) COM ducking aplicado
+    let sharpness: Float   // 0...1; em frame = 0.3 (ignorado pelo iPhone v2+)
     let bass: Float?       // 0...1  energia 20–250 Hz
     let mid: Float?        // 0...1  energia 250 Hz–2 kHz
     let treble: Float?     // 0...1  energia > 2 kHz
-    let pitch: Float?      // 0...1  nota dominante dos médios (0 grave … 1 agudo, escala log)
+    let pitch: Float?      // 0...1  nota dominante dos médios (0 grave … 1 agudo)
     let spike: Bool?       // true no instante de um ataque súbito nos agudos
+    let bassTransient: Bool? // true se o grave atual for um impacto (v3)
+    let semanticClass: String? // "Explosion", "Speech" via IA (v4)
 }
 ```
+
 
 Exemplo de frame v2:
 ```json

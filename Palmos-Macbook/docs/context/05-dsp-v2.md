@@ -10,8 +10,10 @@ SCStream (48 kHz, 2 canais, Float32)
  → DFT (vDSP_DFT_zop) → amplitude por bin
  → 3 bandas (RMS) → AGC por banda → bass/mid/treble
  → pitch (pico 250–2000 Hz + interp. parabólica + EMA)
- → spike (spectral flux dos agudos)
- → acumulador (máx. das bandas, última nota, OU dos spikes)
+ → spike (agudos) e bassTransient (graves) via spectral flux
+ → acumulador (máx das bandas, notas, spikes)
+ → Haptic Ducking: Abafa o sinal contínuo em 60% se não houver spike/impacto
+ → Filtro Semântico (SoundAnalysis): Reduz global em 85% se for fala humana ("Speech")
  → a cada ≥32 ms: HapticPayload(type:"frame") → .unreliable
 ```
 
