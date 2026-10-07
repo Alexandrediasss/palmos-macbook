@@ -21,6 +21,8 @@ struct HapticPayload: Codable {
     let spike: Bool?
     /// true se o grave atual for um impacto (transient) em vez de contínuo
     let bassTransient: Bool?
+    /// true se houver um ataque repentino nos médios (Efeito Martelo / Piano)
+    let midTransient: Bool?
     /// Classe semântica detectada via Machine Learning (ex: "Explosion", "Laughter")
     let semanticClass: String?
 
@@ -33,6 +35,7 @@ struct HapticPayload: Codable {
          pitch: Float? = nil,
          spike: Bool? = nil,
          bassTransient: Bool? = nil,
+         midTransient: Bool? = nil,
          semanticClass: String? = nil) {
         self.type = type
         self.intensity = intensity
@@ -43,6 +46,7 @@ struct HapticPayload: Codable {
         self.pitch = pitch
         self.spike = spike
         self.bassTransient = bassTransient
+        self.midTransient = midTransient
         self.semanticClass = semanticClass
     }
 }

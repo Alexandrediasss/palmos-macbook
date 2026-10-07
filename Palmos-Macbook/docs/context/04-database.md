@@ -25,6 +25,7 @@ struct HapticPayload: Codable {
     let pitch: Float?      // 0...1  nota dominante dos médios (0 grave … 1 agudo)
     let spike: Bool?       // true no instante de um ataque súbito nos agudos
     let bassTransient: Bool? // true se o grave atual for um impacto (v3)
+    let midTransient: Bool? // true se houver um ataque repentino nos médios (Efeito Martelo - v6)
     let semanticClass: String? // "Explosion", "Speech" via IA (v4)
 }
 ```

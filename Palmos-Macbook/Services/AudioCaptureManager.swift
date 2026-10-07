@@ -115,7 +115,7 @@ final class AudioCaptureManager: NSObject, ObservableObject, SCStreamDelegate, S
         guard var frame = analyzer.takeFrame() else { return }
         lastSendTime = now
         
-        let isImpact = frame.spike || frame.bassTransient
+        let isImpact = frame.spike || frame.bassTransient || frame.midTransient
         let isSpeech = semanticAnalyzer.currentClass == "Speech"
         let duckingFactor: Float = isImpact ? 1.0 : 0.4
         let g = currentIntensity * duckingFactor * (isSpeech ? 0.15 : 1.0)
@@ -124,6 +124,12 @@ final class AudioCaptureManager: NSObject, ObservableObject, SCStreamDelegate, S
         frame.bass = min(pow(frame.bass, 1.5) * g, 1)
         frame.mid = min(pow(frame.mid, 1.5) * g, 1)
         frame.treble = min(pow(frame.treble, 1.5) * g, 1)
+        
+        // Silêncio Tático (Reset Mecânico) para Efeito Martelo
+        // Zera a onda contínua de médios no frame do ataque, para o motor "respirar" e dar um clique limpo.
+        if frame.midTransient {
+            frame.mid = 0
+        }
         
         // Noise Gate Rigoroso: se a intensidade for ínfima (< 3%) e não for impacto, zera tudo.
         if max(frame.bass, frame.mid, frame.treble) < 0.03 && !isImpact {
@@ -152,15 +158,16 @@ final class AudioCaptureManager: NSObject, ObservableObject, SCStreamDelegate, S
             pitch: frame.pitch,
             spike: frame.spike,
             bassTransient: frame.bassTransient,
+            midTransient: frame.midTransient,
             semanticClass: semanticAnalyzer.currentClass
         )
         
         framesSent += 1
         if framesSent % 100 == 1 {
             let semLog = semanticAnalyzer.currentClass ?? "none"
-            print(String(format: "[Mac] frame #%d b=%.2f m=%.2f t=%.2f p=%.2f spike=%@ bassT=%@ sem=%@",
+            print(String(format: "[Mac] frame #%d b=%.2f m=%.2f t=%.2f p=%.2f spike=%@ bassT=%@ midT=%@ sem=%@",
                          framesSent, frame.bass, frame.mid, frame.treble, frame.pitch, 
-                         frame.spike ? "T" : "F", frame.bassTransient ? "T" : "F", semLog))
+                         frame.spike ? "T" : "F", frame.bassTransient ? "T" : "F", frame.midTransient ? "T" : "F", semLog))
         }
         
         MacNetworkManager.shared.send(payload: payload)
