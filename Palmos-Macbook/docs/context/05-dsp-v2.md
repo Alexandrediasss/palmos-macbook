@@ -25,15 +25,15 @@ SCStream (48 kHz, 2 canais, Float32)
 | Médios | 250–2000 Hz |
 | Agudos | 2000–8000 Hz |
 | Energia da banda | RMS: `sqrt(Σ amp² / 2)`, amplitude calibrada (senoide A ⇒ A) |
-| `noiseFloor` | 0.0005 (RMS da banda) |
-| `minPeak` (piso do pico do AGC) | 0.004 (evita amplificar ruído até 1.0) |
+| `noiseFloor` | 0.002 (RMS da banda, atua como Noise Gate primário) |
+| `minPeak` (piso do pico do AGC) | 0.06 (evita amplificar ruído fraco e impõe headroom) |
 | `peakDecay` | 0.995 por hop (constante de tempo ≈ 4 s) |
 | AGC | `peak = max(x, peak*0.995, minPeak)`; `v = clamp((x - floor)/max(peak - floor, 1e-6))` |
 | Pitch | `clamp(log2(f/250)/3)`; EMA 0.3; se `mid < 0.03` ⇒ alvo 0.5 e sem frequência |
 | Spike | `flux > 1.5 × média(flux)` (EMA 0.1), `rawTreble > 2×floor`, refratário 40 ms (relógio de áudio) |
 | Envio | intervalo mínimo 32 ms (~30 Hz), `.unreliable`, só com peers conectados |
 | Silêncio | 5 frames zerados (para o iPhone desligar as camadas) e depois para de enviar |
-| Compressão no Mac | **nenhuma** (o iPhone aplica `x^0.7`) |
+| Compressão no Mac | **Expansão Exponencial (`pow(x, 1.5)`)** para esmagar sons fracos contra o silêncio. + Noise Gate final (<3% zera). |
 
 ## Decisões e observações
 - O `mid < 0.03` do gate do pitch usa o valor **normalizado** (mesmo corte que o iPhone usa para desligar a melodia), em vez do piso absoluto.
