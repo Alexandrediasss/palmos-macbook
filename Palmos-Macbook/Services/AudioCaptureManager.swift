@@ -117,8 +117,12 @@ final class AudioCaptureManager: NSObject, ObservableObject, SCStreamDelegate, S
         
         let isImpact = frame.spike || frame.bassTransient || frame.midTransient
         let isSpeech = semanticAnalyzer.currentClass == "Speech"
-        let duckingFactor: Float = isImpact ? 1.0 : 0.4
-        let g = currentIntensity * duckingFactor * (isSpeech ? 0.15 : 1.0)
+        
+        // Nova Lógica:
+        // - Se for Impacto (tiro, bumbo, explosão): Ganho 1.0 (mesmo se alguém estiver falando).
+        // - Se NÃO for Impacto, mas for Fala: Ganho 0.0 (Silêncio Absoluto).
+        // - Se NÃO for Impacto e NÃO for fala (música normal): Ganho 0.4 (Ducking de 60%).
+        let g = currentIntensity * (isImpact ? 1.0 : (isSpeech ? 0.0 : 0.4))
         
         // Expansão Exponencial (x^1.5): amassa os valores fracos e preserva os fortes
         frame.bass = min(pow(frame.bass, 1.5) * g, 1)
