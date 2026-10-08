@@ -10,7 +10,7 @@ O **Palmos** é a ponte sensorial para essa lacuna. Ele transforma som em tato. 
 O aplicativo para macOS atua como o **Cérebro** da operação. Ele roda discretamente como um Utilitário de Barra de Menus (Menu Bar App) e opera em etapas de altíssima performance:
 1. **Ouvir:** Captura todo o áudio do sistema do Mac em tempo real, sem delay.
 2. **Entender (DSP + IA):** Analisa as frequências do áudio, separando o som em Graves, Médios e Agudos, detectando a Nota Dominante (Pitch) e extraindo Impactos Secos (Transients). Em paralelo, uma Inteligência Artificial tenta classificar os sons (Ex: fala humana, explosões, música).
-3. **Refinar (Ducking & Expansão):** Aplica regras matemáticas avançadas (Noise Gate Rigoroso e Expansão Exponencial) para ignorar ruídos inúteis e silêncios, priorizando os verdadeiros impactos. Se a IA detectar fala, a vibração é fortemente atenuada para evitar distrações na conversa.
+3. **Refinar (Silêncio Tático & Modos):** Aplica regras matemáticas (Expansão Exponencial) para dar peso aos impactos (Efeito Martelo). A IA aplica o **Silêncio Tático**, cortando a vibração contínua em 100% caso detecte voz humana, mas deixando tiros e explosões passarem. O Mac processa a carga bruta e transfere o controle de volume e Modos (Cinema/Música) inteiramente para o iPhone do usuário.
 4. **Comandar:** Envia pacotes ultrarrápidos via rede local sem fio (~30 frames por segundo) para o app **Palmos (iOS)**, ordenando que a Taptic Engine crie a simulação física.
 
 ## 🚀 Tecnologias Usadas
