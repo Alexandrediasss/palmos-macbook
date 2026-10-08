@@ -7,8 +7,6 @@ O aplicativo do Mac não armazenará histórico de mídia, logs de áudio ou dad
 As seguintes chaves serão salvas em disco para garantir que o usuário não precise recalibrar a experiência sempre que abrir o Mac:
 - `autoConnectToLastDevice` (Bool): Define se o Mac deve tentar reconexão automática silenciosa com o último iPhone pareado ao iniciar (Padrão: `true`).
 - `lastDevicePeerID` (String): Armazena o identificador de rede do último dispositivo utilizado.
-- ~~`bassThreshold`~~ **(removido na v2):** o noise gate fixo foi substituído por normalização adaptativa (AGC) por banda, com piso de ruído constante no código (ver `05-dsp-v2.md`).
-- `globalIntensity` (Double): Multiplicador de força master (Padrão: `1.0`). **Atenção:** multiplica com o slider de intensidade do iPhone (50% × 50% = 25%). Hoje é `@State` na `MenuRootView`.
 - `hasSeenPermissions` (Bool): Flag que controla se o usuário já passou pelo onboarding e autorizou a captura de tela/áudio, evitando telas de bloqueio desnecessárias.
 
 ## 3. Contrato de Comunicação (O Payload de Rede)

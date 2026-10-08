@@ -13,7 +13,7 @@ SCStream (48 kHz, 2 canais, Float32)
  → spike (agudos) e bassTransient (graves) via spectral flux
  → acumulador (máx das bandas, notas, spikes)
  → Haptic Ducking: Abafa o sinal contínuo em 60% se não houver spike/impacto
- → Filtro Semântico (SoundAnalysis): Reduz global em 85% se for fala humana ("Speech")
+ → Filtro Semântico (SoundAnalysis): Silencia totalmente (0%) a onda contínua se for fala humana ("Speech"), mas protege/deixa passar picos de impactos.
  → a cada ≥32 ms: HapticPayload(type:"frame") → .unreliable
 ```
 
@@ -38,7 +38,7 @@ SCStream (48 kHz, 2 canais, Float32)
 ## Decisões e observações
 - O `mid < 0.03` do gate do pitch usa o valor **normalizado** (mesmo corte que o iPhone usa para desligar a melodia), em vez do piso absoluto.
 - Entre dois envios o Mac manda o **máximo** de cada banda (não a média) para não perder picos curtos.
-- Intensidade global do Mac multiplica `bass/mid/treble` antes do envio e **se multiplica** com o slider do iPhone (50% × 50% = 25%). Padrão do Mac: 100%.
+- A intensidade global do Mac foi delegada inteiramente ao app do iPhone (V7). O Mac envia o payload com `1.0` de ganho mestre fixo.
 - `noiseFloor`/`minPeak` são calibrações empíricas em amplitude relativa ao fundo de escala; ajustar se o silêncio vibrar (subir) ou música muito baixa não vibrar (descer `minPeak`).
 - Log no console do Mac: `[Mac] frame #N b=… m=… t=… p=… spike=…` (1º frame e a cada 100).
 

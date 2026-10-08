@@ -28,7 +28,7 @@ O projeto adotará o padrão **MV (Model-View) orientado a Serviços**, potencia
 - `/Models`
   - `HapticPayload.swift`: contrato de rede v2 (idêntico ao do iPhone).
 - `/Views`
-  - `MenuRootView.swift`: status, 3 barras de banda, nota atual, indicador de spike, slider de intensidade, botões de teste.
+  - `MenuRootView.swift`: status, 3 barras de banda, nota atual, indicador de spike, botões de teste. O slider de intensidade foi transferido exclusivamente para o app do iPhone (V7).
 
 ## 5. Concorrência
 O projeto usa `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` (Swift 5). Por isso o analisador DSP é marcado `nonisolated`. O `AudioCaptureManager` publica telemetria para a UI via `DispatchQueue.main.async` a ~15 Hz.
