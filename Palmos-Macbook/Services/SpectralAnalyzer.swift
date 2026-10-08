@@ -22,8 +22,9 @@ nonisolated struct AnalysisFrame {
     var frequency: Float = 0
     var spike: Bool = false
     var bassTransient: Bool = false
+    var midTransient: Bool = false
 
-    var isSilent: Bool { bass == 0 && mid == 0 && treble == 0 && !spike && !bassTransient }
+    var isSilent: Bool { bass == 0 && mid == 0 && treble == 0 && !spike && !bassTransient && !midTransient }
 }
 
 nonisolated final class SpectralAnalyzer {
@@ -45,6 +46,7 @@ nonisolated final class SpectralAnalyzer {
     static let pitchMidGate: Float = 0.03
 
     static let trebleSpikeRatio: Float = 1.5
+    static let midSpikeRatio: Float = 1.3
     static let bassSpikeRatio: Float = 1.15
     static let spikeRefractory: Double = 0.040
     static let fluxAverageSmoothing: Float = 0.1
@@ -63,6 +65,7 @@ nonisolated final class SpectralAnalyzer {
     private var imagOut: [Float]
     private var amp: [Float]            // amplitude por bin (n/2)
     private var prevTreble: [Float]     // amplitudes dos agudos no hop anterior
+    private var prevMid: [Float]        // amplitudes dos médios no hop anterior
     private var prevBass: [Float]       // amplitudes dos graves no hop anterior
 
     private var sampleRate: Double = 0
@@ -73,9 +76,11 @@ nonisolated final class SpectralAnalyzer {
     private var peaks: [Float] = [SpectralAnalyzer.minPeak, SpectralAnalyzer.minPeak, SpectralAnalyzer.minPeak]
     private var pitchSmoothed: Float = 0.5
     private var fluxAverage: Float = 0
+    private var midFluxAverage: Float = 0
     private var bassFluxAverage: Float = 0
     private var clock: Double = 0       // relógio em segundos de áudio processado
     private var lastSpikeTime: Double = -1
+    private var lastMidSpikeTime: Double = -1
     private var lastBassSpikeTime: Double = -1
 
     private var acc = AnalysisFrame()
@@ -98,6 +103,7 @@ nonisolated final class SpectralAnalyzer {
         imagOut = [Float](repeating: 0, count: n)
         amp = [Float](repeating: 0, count: n / 2)
         prevTreble = [Float](repeating: 0, count: n / 2)
+        prevMid = [Float](repeating: 0, count: n / 2)
         prevBass = [Float](repeating: 0, count: n / 2)
     }
 
@@ -112,11 +118,14 @@ nonisolated final class SpectralAnalyzer {
         peaks = [Self.minPeak, Self.minPeak, Self.minPeak]
         pitchSmoothed = 0.5
         fluxAverage = 0
+        midFluxAverage = 0
         bassFluxAverage = 0
         clock = 0
         lastSpikeTime = -1
+        lastMidSpikeTime = -1
         lastBassSpikeTime = -1
         for i in prevTreble.indices { prevTreble[i] = 0 }
+        for i in prevMid.indices { prevMid[i] = 0 }
         for i in prevBass.indices { prevBass[i] = 0 }
         acc = AnalysisFrame()
         accHops = 0
@@ -149,6 +158,7 @@ nonisolated final class SpectralAnalyzer {
         acc.treble = 0
         acc.spike = false
         acc.bassTransient = false
+        acc.midTransient = false
         accHops = 0
         return out
     }
@@ -221,6 +231,13 @@ nonisolated final class SpectralAnalyzer {
             prevTreble[k] = amp[k]
         }
         
+        var midFlux: Float = 0
+        for k in midRange {
+            let d = amp[k] - prevMid[k]
+            if d > 0 { midFlux += d }
+            prevMid[k] = amp[k]
+        }
+        
         var bassFlux: Float = 0
         for k in bassRange {
             let d = amp[k] - prevBass[k]
@@ -238,6 +255,14 @@ nonisolated final class SpectralAnalyzer {
             lastSpikeTime = clock
         }
         
+        var midSpike = false
+        if rawMid > Self.noiseFloor * 2,
+           midFlux > Self.midSpikeRatio * max(midFluxAverage, 1e-5),
+           clock - lastMidSpikeTime >= Self.spikeRefractory {
+            midSpike = true
+            lastMidSpikeTime = clock
+        }
+        
         var bassSpike = false
         if rawBass > Self.noiseFloor * 2,
            bassFlux > Self.bassSpikeRatio * max(bassFluxAverage, 1e-5),
@@ -247,6 +272,7 @@ nonisolated final class SpectralAnalyzer {
         }
 
         fluxAverage += Self.fluxAverageSmoothing * (flux - fluxAverage)
+        midFluxAverage += Self.fluxAverageSmoothing * (midFlux - midFluxAverage)
         bassFluxAverage += Self.fluxAverageSmoothing * (bassFlux - bassFluxAverage)
 
         // Acumula até o próximo envio de rede.
@@ -257,6 +283,7 @@ nonisolated final class SpectralAnalyzer {
         acc.frequency = freq
         acc.spike = acc.spike || spike
         acc.bassTransient = acc.bassTransient || bassSpike
+        acc.midTransient = acc.midTransient || midSpike
         accHops += 1
     }
 
