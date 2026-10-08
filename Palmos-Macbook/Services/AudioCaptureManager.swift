@@ -31,8 +31,8 @@ final class AudioCaptureManager: NSObject, ObservableObject, SCStreamDelegate, S
     private var framesSent = 0
     private var uiTick = 0
     
-    /// Intensidade global do Mac (injetada pela UI). Multiplica com o slider do iPhone (50% × 50% = 25%).
-    var currentIntensity: Float = 1.0
+    /// A intensidade global agora é controlada 100% pelo aplicativo do iPhone.
+    let currentIntensity: Float = 1.0
     
     // DSP (acessado somente na audioQueue)
     private let analyzer = SpectralAnalyzer()
@@ -115,15 +115,25 @@ final class AudioCaptureManager: NSObject, ObservableObject, SCStreamDelegate, S
         guard var frame = analyzer.takeFrame() else { return }
         lastSendTime = now
         
-        let isImpact = frame.spike || frame.bassTransient
+        let isImpact = frame.spike || frame.bassTransient || frame.midTransient
         let isSpeech = semanticAnalyzer.currentClass == "Speech"
-        let duckingFactor: Float = isImpact ? 1.0 : 0.4
-        let g = currentIntensity * duckingFactor * (isSpeech ? 0.15 : 1.0)
+        
+        // Nova Lógica:
+        // - Se for Impacto (tiro, bumbo, explosão): Ganho 1.0 (mesmo se alguém estiver falando).
+        // - Se NÃO for Impacto, mas for Fala: Ganho 0.0 (Silêncio Absoluto).
+        // - Se NÃO for Impacto e NÃO for fala (música normal): Ganho 0.4 (Ducking de 60%).
+        let g = currentIntensity * (isImpact ? 1.0 : (isSpeech ? 0.0 : 0.4))
         
         // Expansão Exponencial (x^1.5): amassa os valores fracos e preserva os fortes
         frame.bass = min(pow(frame.bass, 1.5) * g, 1)
         frame.mid = min(pow(frame.mid, 1.5) * g, 1)
         frame.treble = min(pow(frame.treble, 1.5) * g, 1)
+        
+        // Silêncio Tático (Reset Mecânico) para Efeito Martelo
+        // Zera a onda contínua de médios no frame do ataque, para o motor "respirar" e dar um clique limpo.
+        if frame.midTransient {
+            frame.mid = 0
+        }
         
         // Noise Gate Rigoroso: se a intensidade for ínfima (< 3%) e não for impacto, zera tudo.
         if max(frame.bass, frame.mid, frame.treble) < 0.03 && !isImpact {
@@ -152,15 +162,16 @@ final class AudioCaptureManager: NSObject, ObservableObject, SCStreamDelegate, S
             pitch: frame.pitch,
             spike: frame.spike,
             bassTransient: frame.bassTransient,
+            midTransient: frame.midTransient,
             semanticClass: semanticAnalyzer.currentClass
         )
         
         framesSent += 1
         if framesSent % 100 == 1 {
             let semLog = semanticAnalyzer.currentClass ?? "none"
-            print(String(format: "[Mac] frame #%d b=%.2f m=%.2f t=%.2f p=%.2f spike=%@ bassT=%@ sem=%@",
+            print(String(format: "[Mac] frame #%d b=%.2f m=%.2f t=%.2f p=%.2f spike=%@ bassT=%@ midT=%@ sem=%@",
                          framesSent, frame.bass, frame.mid, frame.treble, frame.pitch, 
-                         frame.spike ? "T" : "F", frame.bassTransient ? "T" : "F", semLog))
+                         frame.spike ? "T" : "F", frame.bassTransient ? "T" : "F", frame.midTransient ? "T" : "F", semLog))
         }
         
         MacNetworkManager.shared.send(payload: payload)

@@ -12,9 +12,6 @@ struct MenuRootView: View {
     @StateObject private var networkManager = MacNetworkManager.shared
     @StateObject private var audioManager = AudioCaptureManager.shared
 
-    // Local por enquanto; será migrado para @AppStorage (globalIntensity).
-    // Atenção: multiplica com o slider de intensidade do iPhone (50% × 50% = 25%).
-    @State private var globalIntensity: Double = 1.0
     @State private var isSendingTestFrames = false
 
     /// Nome da nota (ex.: "A4") a partir da frequência dominante dos médios.
@@ -119,13 +116,9 @@ struct MenuRootView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 14) {
-                SliderRow(title: "Intensidade Global",
-                          accessibilityHint: "Ajustar intensidade global da vibração",
-                          value: $globalIntensity)
-                          
                 HStack {
                     Button("Testar Vibração") {
-                        let payload = HapticPayload(type: "transient", intensity: Float(globalIntensity), sharpness: 0.8)
+                        let payload = HapticPayload(type: "transient", intensity: 1.0, sharpness: 0.8)
                         networkManager.send(payload: payload)
                     }
                     Button("Frame de teste") {
@@ -150,9 +143,6 @@ struct MenuRootView: View {
         }
         .padding(14)
         .frame(width: 280)
-        .onChange(of: globalIntensity) { newValue in
-            audioManager.currentIntensity = Float(newValue)
-        }
         .onAppear {
             // Se já estiver conectado, podemos tentar iniciar a captura (opcional)
             if isConnected && !audioManager.isCapturing {
