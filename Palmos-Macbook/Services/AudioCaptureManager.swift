@@ -31,8 +31,8 @@ final class AudioCaptureManager: NSObject, ObservableObject, SCStreamDelegate, S
     private var framesSent = 0
     private var uiTick = 0
     
-    /// Intensidade global do Mac (injetada pela UI). Multiplica com o slider do iPhone (50% × 50% = 25%).
-    var currentIntensity: Float = 1.0
+    /// A intensidade global agora é controlada 100% pelo aplicativo do iPhone.
+    let currentIntensity: Float = 1.0
     
     // DSP (acessado somente na audioQueue)
     private let analyzer = SpectralAnalyzer()
